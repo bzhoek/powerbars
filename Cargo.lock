@@ -913,7 +913,6 @@ dependencies = [
  "local-ip-address",
  "log",
  "reqwest",
- "serde",
  "serde_json",
  "tokio",
  "ursual",

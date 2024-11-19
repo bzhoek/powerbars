@@ -2,6 +2,9 @@ use clap::Command;
 use local_ip_address::local_ip;
 use log::{debug, error};
 use serde_json::Value;
+use std::fs;
+use std::path::Path;
+use std::time::SystemTime;
 use ursual::{configure_logging, debug_arg, verbose_arg};
 
 #[tokio::main]
@@ -28,11 +31,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       println!("{}", ip_addr);
     }
     Some(("temperature", _)) => {
-      let env_name = "WEATHER_API_KEY";
-      let location = "Amsterdam";
-      let api_key = std::env::var(env_name).unwrap_or_else(|_| panic!("Missing {} environment variable", env_name));
-      let url = format!("http://api.weatherapi.com/v1/current.json?key={}&q={}&aqi=no", api_key, location);
-      let resp = reqwest::get(url).await?.json::<Value>().await?;
+      let path = Path::new("weather.json");
+      let metadata = fs::metadata(path)?;
+
+      let mut refresh = true;
+      if let Ok(modified) = metadata.modified() {
+        let now = SystemTime::now();
+        let diff = now.duration_since(modified).unwrap();
+        if diff < std::time::Duration::from_secs(60 * 5) {
+          refresh = false
+        }
+      }
+
+      let text = if refresh {
+        let env_name = "WEATHER_API_KEY";
+        let location = "Amsterdam";
+        let api_key = std::env::var(env_name).unwrap_or_else(|_| panic!("Missing {} environment variable", env_name));
+        let url = format!("http://api.weatherapi.com/v1/current.json?key={}&q={}&aqi=no", api_key, location);
+        let text = reqwest::get(url).await?.text().await?;
+        fs::write(path, &text)?;
+        debug!("Wrote to {:?}", path);
+        text
+      } else {
+        fs::read_to_string(path)?
+      };
+
+      let resp: Value = serde_json::from_str(&text)?;
       debug!("{:?}", resp);
       let celcius = nested_value(&resp, vec!["current", "temp_c"]);
       println!("{}º", celcius);
