@@ -1,8 +1,8 @@
 use clap::Command;
 use local_ip_address::local_ip;
-use log::error;
+use log::{debug, error};
 use serde_json::Value;
-use ursual::{debug_arg, verbose_arg};
+use ursual::{configure_logging, debug_arg, verbose_arg};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -15,6 +15,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .subcommand(Command::new("extip").about("Get external IP address"))
     .subcommand(Command::new("temperature").about("Get current outside temperature"))
     .get_matches();
+
+  configure_logging(&args);
 
   match args.subcommand() {
     Some(("extip", _)) => {
@@ -31,6 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       let api_key = std::env::var(env_name).unwrap_or_else(|_| panic!("Missing {} environment variable", env_name));
       let url = format!("http://api.weatherapi.com/v1/current.json?key={}&q={}&aqi=no", api_key, location);
       let resp = reqwest::get(url).await?.json::<Value>().await?;
+      debug!("{:?}", resp);
       let celcius = nested_value(&resp, vec!["current", "temp_c"]);
       println!("{}º", celcius);
     }
