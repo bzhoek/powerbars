@@ -6,12 +6,12 @@ use ursual::{configure_logging, debug_arg, verbose_arg};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-  let args = Command::new("id3-rs")
-    .about("Rust based ID3 tagging")
+  let args = Command::new("powerbars")
+    .about("Rust based status bar helper")
     .subcommand_required(true)
     .arg(debug_arg())
     .arg(verbose_arg())
-    .subcommand(Command::new("ip").about("Get IP address"))
+    .subcommand(Command::new("ip").about("Get local IP address"))
     .subcommand(Command::new("extip").about("Get external IP address"))
     .subcommand(Command::new("temperature").about("Get current outside temperature"))
     .get_matches();
