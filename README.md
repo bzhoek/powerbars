@@ -3,6 +3,7 @@
 A Rust based helper for Tmux and other status bars.
 
 ```
+$ cargo install --git https://github.com/bzhoek/powerbars
 $ powerbars --help
 Rust based status bar helper
 
