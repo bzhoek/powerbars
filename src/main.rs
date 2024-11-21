@@ -67,12 +67,12 @@ fn should_refresh(path: &PathBuf) -> bool {
     if let Ok(modified) = metadata.modified() {
       let now = SystemTime::now();
       let diff = now.duration_since(modified).unwrap();
-      if diff > std::time::Duration::from_secs(60 * 5) {
-        return true;
+      if diff < std::time::Duration::from_secs(60 * 5) {
+        return false;
       }
     }
   }
-  false
+  true
 }
 
 fn nested_value<'a>(value: &'a Value, keys: Vec<&'a str>) -> &'a Value {
