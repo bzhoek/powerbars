@@ -32,19 +32,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     Some(("temperature", _)) => {
       let home = std::env::var("HOME").unwrap_or_else(|_| panic!("Missing HOME environment variable"));
-      let cachedir = PathBuf::from(home).join(".cache").join("powerbars");
-      fs::create_dir_all(&cachedir)?;
-      let path = cachedir.join("weather.json");
-      let mut refresh = true;
-      if let Ok(metadata) = fs::metadata(&path) {
-        if let Ok(modified) = metadata.modified() {
-          let now = SystemTime::now();
-          let diff = now.duration_since(modified).unwrap();
-          if diff < std::time::Duration::from_secs(60 * 5) {
-            refresh = false
-          }
-        }
-      }
+      let path = PathBuf::from(home).join(".cache").join("powerbars");
+      fs::create_dir_all(&path)?;
+
+      let path = path.join("weather.json");
+      let refresh = should_refresh(&path);
 
       let text = if refresh {
         let env_name = "WEATHER_API_KEY";
@@ -68,6 +60,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
   Ok(())
+}
+
+fn should_refresh(path: &PathBuf) -> bool {
+  if let Ok(metadata) = fs::metadata(path) {
+    if let Ok(modified) = metadata.modified() {
+      let now = SystemTime::now();
+      let diff = now.duration_since(modified).unwrap();
+      if diff > std::time::Duration::from_secs(60 * 5) {
+        return true;
+      }
+    }
+  }
+  false
 }
 
 fn nested_value<'a>(value: &'a Value, keys: Vec<&'a str>) -> &'a Value {
