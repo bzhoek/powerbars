@@ -3,7 +3,7 @@ use local_ip_address::local_ip;
 use log::{debug, error};
 use serde_json::Value;
 use std::fs;
-use std::path::Path;
+use std::path::PathBuf;
 use std::time::SystemTime;
 use ursual::{configure_logging, debug_arg, verbose_arg};
 
@@ -31,15 +31,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       println!("{}", ip_addr);
     }
     Some(("temperature", _)) => {
-      let path = Path::new("weather.json");
-      let metadata = fs::metadata(path)?;
-
+      let home = std::env::var("HOME").unwrap_or_else(|_| panic!("Missing HOME environment variable"));
+      let cachedir = PathBuf::from(home).join(".cache").join("powerbars");
+      fs::create_dir_all(&cachedir)?;
+      let path = cachedir.join("weather.json");
       let mut refresh = true;
-      if let Ok(modified) = metadata.modified() {
-        let now = SystemTime::now();
-        let diff = now.duration_since(modified).unwrap();
-        if diff < std::time::Duration::from_secs(60 * 5) {
-          refresh = false
+      if let Ok(metadata) = fs::metadata(&path) {
+        if let Ok(modified) = metadata.modified() {
+          let now = SystemTime::now();
+          let diff = now.duration_since(modified).unwrap();
+          if diff < std::time::Duration::from_secs(60 * 5) {
+            refresh = false
+          }
         }
       }
 
@@ -49,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let api_key = std::env::var(env_name).unwrap_or_else(|_| panic!("Missing {} environment variable", env_name));
         let url = format!("http://api.weatherapi.com/v1/current.json?key={}&q={}&aqi=no", api_key, location);
         let text = reqwest::get(url).await?.text().await?;
-        fs::write(path, &text)?;
+        fs::write(&path, &text)?;
         debug!("Wrote to {:?}", path);
         text
       } else {
